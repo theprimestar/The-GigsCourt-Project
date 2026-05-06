@@ -21,6 +21,12 @@ void main() async {
     await Supabase.initialize(
       url: SupabaseConfig.url,
       anonKey: SupabaseConfig.anonKey,
+      accessToken: () async {
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) return null;
+        final idToken = await user.getIdToken(false);
+        return idToken;
+      },
     );
   } catch (e) {
     runApp(ErrorApp(error: 'Supabase Error:\n$e'));
