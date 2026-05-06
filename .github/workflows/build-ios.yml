@@ -24,10 +24,15 @@ jobs:
           cd ..
 
       - name: Build unsigned IPA
-        run: flutter build ipa --no-codesign --release
+        run: |
+          flutter build ipa --no-codesign --release
+          mkdir -p Payload
+          cp -r build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app Payload/
+          zip -r build/ios/ipa/GigsCourt.ipa Payload/
+          rm -rf Payload
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: GigsCourt-iOS-Unsigned
-          path: build/ios/ipa/*.ipa
+          path: build/ios/ipa/GigsCourt.ipa
