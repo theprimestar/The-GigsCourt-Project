@@ -28,6 +28,7 @@ jobs:
           flutter build ipa --no-codesign --release
           mkdir -p Payload
           cp -r build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app Payload/
+          mkdir -p build/ios/ipa
           zip -r build/ios/ipa/GigsCourt.ipa Payload/
           rm -rf Payload
 
