@@ -95,7 +95,7 @@ class _AuthScreenState extends State<AuthScreen> {
       setState(() => _error = _getErrorMessage(e));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Something went wrong. Please try again.');
+      setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -113,7 +113,6 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Column(
             children: [
               const SizedBox(height: 80),
-              // Logo
               Column(
                 children: [
                   SvgPicture.asset(
@@ -146,10 +145,8 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              // Form
               Column(
                 children: [
-                  // Email
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -197,7 +194,6 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Password
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -244,7 +240,6 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Error card
                   if (_error != null)
                     Container(
                       width: double.infinity,
@@ -288,7 +283,6 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     ),
                   const SizedBox(height: 8),
-                  // Submit button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -328,7 +322,6 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // Toggle
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
