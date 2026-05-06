@@ -67,8 +67,8 @@ class SplashScreen extends StatelessWidget {
           children: [
             SvgPicture.asset(
               'assets/logo.svg',
-              width: 120,
-              height: 120,
+              width: 80,
+              height: 80,
               colorFilter: ColorFilter.mode(
                 isDark ? Colors.white : Colors.black,
                 BlendMode.srcIn,
