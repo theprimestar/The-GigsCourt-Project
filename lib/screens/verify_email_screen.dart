@@ -28,23 +28,25 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   }
 
   Future<void> _startPolling() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      widget.onBack();
-      return;
-    }
-
-    // Check every 2 seconds for up to 2 minutes
     for (int i = 0; i < 60; i++) {
       if (!mounted) return;
-      await user.reload();
-      if (user.emailVerified) {
+
+      await FirebaseAuth.instance.currentUser?.reload();
+      final freshUser = FirebaseAuth.instance.currentUser;
+
+      if (freshUser == null) {
+        widget.onBack();
+        return;
+      }
+
+      if (freshUser.emailVerified) {
         if (mounted) {
           setState(() => _checking = false);
           widget.onVerified();
         }
         return;
       }
+
       await Future.delayed(const Duration(seconds: 2));
     }
     if (mounted) setState(() => _checking = false);
