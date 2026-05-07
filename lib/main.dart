@@ -3,7 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'core/supabase_config.dart';
+import 'config/supabase_config.dart';
 import 'screens/auth_screen.dart';
 import 'screens/verify_email_screen.dart';
 
