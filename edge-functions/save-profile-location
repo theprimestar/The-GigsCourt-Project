@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { initializeApp, cert, getApps } from "https://esm.sh/firebase-admin/app@11";
-import { getAuth } from "https://esm.sh/firebase-admin/auth@11";
+import { initializeApp, cert, getApps } from "https://esm.sh/firebase-admin/app";
+import { getAuth } from "https://esm.sh/firebase-admin/auth";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -8,7 +8,6 @@ const FIREBASE_SERVICE_ACCOUNT_KEY = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_KEY"
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-// Initialize Firebase Admin only once
 if (getApps().length === 0) {
   initializeApp({
     credential: cert(JSON.parse(FIREBASE_SERVICE_ACCOUNT_KEY)),
@@ -31,7 +30,6 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Extract Firebase ID token from Authorization header
     const authHeader = req.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return new Response(
@@ -42,7 +40,6 @@ Deno.serve(async (req: Request) => {
 
     const idToken = authHeader.split("Bearer ")[1];
 
-    // Verify the Firebase JWT
     let decodedToken;
     try {
       decodedToken = await getAuth().verifyIdToken(idToken);
@@ -55,7 +52,6 @@ Deno.serve(async (req: Request) => {
 
     const firebaseUid = decodedToken.uid;
 
-    // Parse request body
     const { lat, lng, address } = await req.json();
 
     if (!lat || !lng || !address) {
@@ -65,7 +61,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Write to Supabase using the verified Firebase UID
     const { error } = await supabase.from("profiles").upsert({
       id: firebaseUid,
       workspace_lat: lat,
