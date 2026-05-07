@@ -1,0 +1,89 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { initializeApp, cert, getApps } from "https://esm.sh/firebase-admin/app@11";
+import { getAuth } from "https://esm.sh/firebase-admin/auth@11";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const FIREBASE_SERVICE_ACCOUNT_KEY = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_KEY")!;
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+// Initialize Firebase Admin only once
+if (getApps().length === 0) {
+  initializeApp({
+    credential: cert(JSON.parse(FIREBASE_SERVICE_ACCOUNT_KEY)),
+  });
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      },
+    });
+  }
+
+  if (req.method !== "POST") {
+    return new Response("Method not allowed", { status: 405 });
+  }
+
+  try {
+    // Extract Firebase ID token from Authorization header
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Missing or invalid authorization header" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+
+    // Verify the Firebase JWT
+    let decodedToken;
+    try {
+      decodedToken = await getAuth().verifyIdToken(idToken);
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    const firebaseUid = decodedToken.uid;
+
+    // Parse request body
+    const { lat, lng, address } = await req.json();
+
+    if (!lat || !lng || !address) {
+      return new Response(
+        JSON.stringify({ error: "Missing required fields: lat, lng, address" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Write to Supabase using the verified Firebase UID
+    const { error } = await supabase.from("profiles").upsert({
+      id: firebaseUid,
+      workspace_lat: lat,
+      workspace_lng: lng,
+      workspace_address: address,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) throw error;
+
+    return new Response(
+      JSON.stringify({ success: true }),
+      { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+    );
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } }
+    );
+  }
+});
