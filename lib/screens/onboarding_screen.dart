@@ -455,7 +455,7 @@ class _StepNameServicesState extends State<_StepNameServices> {
                           spacing: 8,
                           runSpacing: 8,
                           children: List.generate(4, (j) => Container(
-                            width: [80, 100, 70, 90][j],
+                            width: [80.0, 100.0, 70.0, 90.0][j],
                             height: 34,
                             decoration: BoxDecoration(
                               color: isDark ? Colors.white10 : Colors.black12,
@@ -925,7 +925,7 @@ class _StepLocationState extends State<_StepLocation> {
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: isDark ? const Color(0xFFF5F5F7) : const Color(0xFF1A1A1A),
-                    side: BorderSide(color: isDark ? Colors.white20 : const Color(0xFFE5E5EA)),
+                    side: BorderSide(color: isDark ? Colors.white.withOpacity(0.2) : const Color(0xFFE5E5EA)),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -1209,7 +1209,7 @@ class _StepPhotoBioState extends State<_StepPhotoBio> {
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: isDark ? const Color(0xFFF5F5F7) : const Color(0xFF1A1A1A),
-                    side: BorderSide(color: isDark ? Colors.white20 : const Color(0xFFE5E5EA)),
+                    side: BorderSide(color: isDark ? Colors.white.withOpacity(0.2) : const Color(0xFFE5E5EA)),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -1329,7 +1329,7 @@ class _StepWalkthrough extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: isDark ? Colors.white8 : const Color(0xFFF0F0F0)),
+                      border: Border.all(color: isDark ? Colors.white.withOpacity(0.08) : const Color(0xFFF0F0F0)),
                     ),
                     child: Row(
                       children: [
@@ -1391,7 +1391,7 @@ class _StepWalkthrough extends StatelessWidget {
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: isDark ? const Color(0xFFF5F5F7) : const Color(0xFF1A1A1A),
-                    side: BorderSide(color: isDark ? Colors.white20 : const Color(0xFFE5E5EA)),
+                    side: BorderSide(color: isDark ? Colors.white.withOpacity(0.2) : const Color(0xFFE5E5EA)),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
