@@ -26,6 +26,16 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>GigsCourt needs camera access for profile photos and chat messages.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>GigsCourt needs your location to show nearby service providers.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>GigsCourt needs microphone access for voice messages.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>GigsCourt needs to save photos to your library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>GigsCourt needs photo library access for profile photos and chat messages.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
