@@ -281,18 +281,6 @@ class _StepLocationState extends State<StepLocation> {
   Future<void> _getCurrentLocation() async {
     setState(() { _loadingLocation = true; _geoError = false; });
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          setState(() { _geoError = true; _loadingLocation = false; });
-          return;
-        }
-      }
-      if (permission == LocationPermission.deniedForever) {
-        setState(() { _geoError = true; _loadingLocation = false; });
-        return;
-      }
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -307,7 +295,17 @@ class _StepLocationState extends State<StepLocation> {
       _mapController.move(pos, 15.0);
       _reverseGeocode(pos);
     } catch (e) {
-      if (mounted) setState(() { _geoError = true; _loadingLocation = false; });
+      final defaultPos = const LatLng(9.0765, 7.3986);
+      if (mounted) {
+        setState(() {
+          _currentPosition = defaultPos;
+          _lat = null;
+          _lng = null;
+          _addressController.text = '';
+          _loadingLocation = false;
+        });
+        _mapController.move(defaultPos, 6.0);
+      }
     }
   }
 
@@ -323,10 +321,48 @@ class _StepLocationState extends State<StepLocation> {
   }
 
   void _handleContinue() {
+    if (_lat == null || _lng == null) {
+      HapticFeedback.heavyImpact();
+      setState(() => _error = 'Drag the map to set your workspace location.');
+      return;
+    }
+
     final address = _addressController.text.trim();
-    if (address.isEmpty) { setState(() => _error = 'Please enter your workspace address.'); return; }
-    if (_lat == null || _lng == null) { setState(() => _error = 'Please set your workspace location.'); return; }
-    widget.onNext({'workspaceLat': _lat, 'workspaceLng': _lng, 'workspaceAddress': address});
+    if (address.isEmpty) {
+      setState(() => _error = 'Please enter your workspace address.');
+      return;
+    }
+
+    HapticFeedback.mediumImpact();
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final isDark = MediaQuery.of(ctx).platformBrightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+          title: Text('Set as your workspace location?', style: TextStyle(color: isDark ? const Color(0xFFF5F5F7) : const Color(0xFF1A1A1A), fontSize: 17, fontWeight: FontWeight.w600)),
+          content: Text(address, style: TextStyle(color: isDark ? const Color(0xFF98989D) : const Color(0xFF6E6E73), fontSize: 14)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: Color(0xFF6E6E73))),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                widget.onNext({
+                  'workspaceLat': _lat,
+                  'workspaceLng': _lng,
+                  'workspaceAddress': address,
+                });
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3B5FE3), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+              child: const Text('Yes, Save'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -346,52 +382,65 @@ class _StepLocationState extends State<StepLocation> {
         const SizedBox(height: 6),
         Text('Set your workspace location so clients can find you.', style: TextStyle(fontSize: 15, color: isDark ? const Color(0xFF98989D) : const Color(0xFF6E6E73))),
         const SizedBox(height: 24),
-        // Draggable map with fixed center pin
+        // Map
         Container(
           height: 280,
           width: double.infinity,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), border: Border.all(color: isDark ? Colors.white10 : const Color(0xFFE5E5EA))),
           child: _loadingLocation
               ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const SizedBox(width: 32, height: 32, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF3B5FE3))), const SizedBox(height: 12), Text('Getting your location...', style: TextStyle(fontSize: 13, color: isDark ? Colors.white38 : Colors.black38))]))
-              : _geoError
-                  ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.location_off, size: 36, color: Color(0xFFFF3B30)), const SizedBox(height: 8), const Text('Location unavailable', style: TextStyle(color: Color(0xFFFF3B30), fontSize: 13)), const SizedBox(height: 12), ElevatedButton(onPressed: _getCurrentLocation, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3B5FE3), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))), child: const Text('Try Again'))]))
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Stack(
-                        alignment: Alignment.center,
+              : ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      FlutterMap(
+                        mapController: _mapController,
+                        options: MapOptions(
+                          initialCenter: _currentPosition ?? const LatLng(9.0765, 7.3986),
+                          initialZoom: _lat != null ? 15.0 : 6.0,
+                          onMapEvent: (event) {
+                            if (event is MapEventMoveEnd) {
+                              final center = _mapController.camera.center;
+                              setState(() {
+                                _currentPosition = center;
+                                _lat = center.latitude;
+                                _lng = center.longitude;
+                              });
+                              _reverseGeocode(center);
+                            }
+                          },
+                        ),
                         children: [
-                          FlutterMap(
-                            mapController: _mapController,
-                            options: MapOptions(
-                              initialCenter: _currentPosition ?? const LatLng(9.0765, 7.3986),
-                              initialZoom: 15.0,
-                              onMapEvent: (event) {
-                                if (event is MapEventMoveEnd) {
-                                  final center = _mapController.camera.center;
-                                  setState(() {
-                                    _currentPosition = center;
-                                    _lat = center.latitude;
-                                    _lng = center.longitude;
-                                  });
-                                  _reverseGeocode(center);
-                                }
-                              },
-                            ),
-                            children: [
-                              TileLayer(
-                                urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                                subdomains: const ['a', 'b', 'c', 'd'],
-                                userAgentPackageName: 'com.gigscourt.app',
-                              ),
-                            ],
-                          ),
-                          // Fixed center pin
-                          IgnorePointer(
-                            child: Icon(Icons.location_pin, color: const Color(0xFF3B5FE3), size: 42),
+                          TileLayer(
+                            urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                            subdomains: const ['a', 'b', 'c', 'd'],
+                            userAgentPackageName: 'com.gigscourt.app',
                           ),
                         ],
                       ),
-                    ),
+                      IgnorePointer(
+                        child: Icon(Icons.location_pin, color: _lat != null ? const Color(0xFF3B5FE3) : const Color(0xFFFF3B30), size: 42),
+                      ),
+                      if (_lat == null)
+                        Positioned(
+                          top: 12,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 8)],
+                            ),
+                            child: Text(
+                              'Drag the map to set your location',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? const Color(0xFFF5F5F7) : const Color(0xFF1A1A1A)),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
         ),
         const SizedBox(height: 12),
         Center(child: TextButton.icon(
