@@ -31,4 +31,33 @@ class FirestoreService {
       'updated_at': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
+
+  Future<List<Map<String, dynamic>>> getProfilesByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+
+    final List<Map<String, dynamic>> results = [];
+    for (int i = 0; i < ids.length; i += 10) {
+      final batch = ids.sublist(i, i + 10 > ids.length ? ids.length : i + 10);
+      final snapshot = await _firestore
+          .collection('profiles')
+          .where(FieldPath.documentId, whereIn: batch)
+          .get();
+      for (final doc in snapshot.docs) {
+        results.add({
+          'id': doc.id,
+          ...doc.data(),
+        });
+      }
+    }
+    return results;
+  }
+
+  Future<Map<String, dynamic>?> getProfileById(String userId) async {
+    final doc = await _firestore.collection('profiles').doc(userId).get();
+    if (!doc.exists) return null;
+    return {
+      'id': doc.id,
+      ...doc.data()!,
+    };
+  }
 }
