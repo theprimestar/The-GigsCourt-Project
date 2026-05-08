@@ -58,4 +58,40 @@ class SupabaseService {
       throw Exception(error['error'] ?? 'Failed to save location');
     }
   }
+
+  Future<List<Map<String, dynamic>>> getNearbyProfiles({
+    required double viewerLat,
+    required double viewerLng,
+    int limit = 20,
+    double? cursorDistance,
+    String? cursorId,
+  }) async {
+    final response = await _client.rpc('get_nearby_profiles', params: {
+      'viewer_lat': viewerLat,
+      'viewer_lng': viewerLng,
+      'p_limit': limit,
+      'p_cursor_distance': cursorDistance,
+      'p_cursor_id': cursorId,
+    });
+
+    return List<Map<String, dynamic>>.from(response as List);
+  }
+
+  Future<List<Map<String, dynamic>>> getTopNearbyProviders({
+    required double viewerLat,
+    required double viewerLng,
+    int limit = 10,
+    double? cursorDistance,
+    String? cursorId,
+  }) async {
+    final response = await _client.rpc('get_top_nearby_providers', params: {
+      'viewer_lat': viewerLat,
+      'viewer_lng': viewerLng,
+      'p_limit': limit,
+      'p_cursor_distance': cursorDistance,
+      'p_cursor_id': cursorId,
+    });
+
+    return List<Map<String, dynamic>>.from(response as List);
+  }
 }
