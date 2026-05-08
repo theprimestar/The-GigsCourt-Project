@@ -8,7 +8,9 @@ import '../services/imagekit_service.dart';
 import '../widgets/provider_detail_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onLogout;
+
+  const HomeScreen({super.key, this.onLogout});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -54,18 +56,31 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        await Geolocator.requestPermission();
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _error = 'Location permission is required to find nearby providers.';
+          });
+        }
+        return;
       }
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
       _viewerLat = position.latitude;
       _viewerLng = position.longitude;
-    } catch (_) {
-      _viewerLat = 9.0765;
-      _viewerLng = 7.3986;
+      if (mounted) _loadData();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Unable to get your location. Please try again.';
+        });
+      }
     }
-    if (mounted) _loadData();
   }
 
   Future<void> _loadData() async {
@@ -203,11 +218,9 @@ class _HomeScreenState extends State<HomeScreen> {
         imageKitService: _imageKitService,
         onMessage: () {
           Navigator.pop(context);
-          // Navigate to chat — Phase 5
         },
         onViewProfile: () {
           Navigator.pop(context);
-          // Navigate to profile — Phase 7
         },
       ),
     );
@@ -221,6 +234,10 @@ class _HomeScreenState extends State<HomeScreen> {
       return _buildSkeleton(isDark);
     }
 
+    if (_error != null) {
+      return _buildLocationError(isDark);
+    }
+
     if (_allProviders.isEmpty && _topProviders.isEmpty) {
       return _buildEmptyState(isDark);
     }
@@ -232,16 +249,9 @@ class _HomeScreenState extends State<HomeScreen> {
           CustomScrollView(
             controller: _scrollController,
             slivers: [
-              // Header
-              SliverToBoxAdapter(
-                child: _buildHeader(isDark),
-              ),
-              // Top Providers
+              SliverToBoxAdapter(child: _buildHeader(isDark)),
               if (_topProviders.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: _buildDiscoverSection(isDark),
-                ),
-              // All Providers
+                SliverToBoxAdapter(child: _buildDiscoverSection(isDark)),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -273,7 +283,6 @@ class _HomeScreenState extends State<HomeScreen> {
               const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           ),
-          // Scroll to top
           if (_showScrollTop)
             Positioned(
               bottom: 80,
@@ -312,9 +321,19 @@ class _HomeScreenState extends State<HomeScreen> {
               SvgPicture.asset('assets/gigscourt-text.svg', width: 80, height: 14, colorFilter: ColorFilter.mode(isDark ? Colors.white : const Color(0xFF1A1A1A), BlendMode.srcIn)),
             ],
           ),
-          IconButton(
-            onPressed: () {},
-            icon: Icon(Icons.notifications_outlined, color: isDark ? Colors.white : const Color(0xFF1A1A1A)),
+          Row(
+            children: [
+              IconButton(
+                onPressed: () {},
+                icon: Icon(Icons.notifications_outlined, color: isDark ? Colors.white : const Color(0xFF1A1A1A)),
+              ),
+              if (widget.onLogout != null)
+                IconButton(
+                  onPressed: widget.onLogout,
+                  icon: Icon(Icons.logout, color: isDark ? Colors.white54 : Colors.black54, size: 22),
+                  tooltip: 'Logout',
+                ),
+            ],
           ),
         ],
       ),
@@ -565,6 +584,34 @@ class _HomeScreenState extends State<HomeScreen> {
               Text('No providers nearby yet', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: isDark ? const Color(0xFFF5F5F7) : const Color(0xFF1A1A1A)), textAlign: TextAlign.center),
               const SizedBox(height: 8),
               Text('You can be the first to offer your service in this area', style: TextStyle(fontSize: 14, color: isDark ? const Color(0xFF98989D) : const Color(0xFF6E6E73)), textAlign: TextAlign.center),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocationError(bool isDark) {
+    return Scaffold(
+      backgroundColor: isDark ? Colors.black : const Color(0xFFF7F6F4),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.location_off, size: 48, color: Color(0xFFFF3B30)),
+              const SizedBox(height: 16),
+              Text(_error ?? 'Location error', style: TextStyle(fontSize: 16, color: isDark ? const Color(0xFFF5F5F7) : const Color(0xFF1A1A1A)), textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() { _loading = true; _error = null; });
+                  _initLocation();
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3B5FE3), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+                child: const Text('Retry'),
+              ),
             ],
           ),
         ),
