@@ -131,6 +131,9 @@ class _StepNameServicesState extends State<StepNameServices> {
         const SizedBox(height: 6),
         Text('This helps clients find you', style: TextStyle(fontSize: 15, color: isDark ? const Color(0xFF98989D) : const Color(0xFF6E6E73))),
         const SizedBox(height: 28),
+        // Name label
+        Text('Full Name / Business Name', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isDark ? const Color(0xFF98989D) : const Color(0xFF6E6E73))),
+        const SizedBox(height: 8),
         TextField(
           controller: _nameController,
           style: TextStyle(fontSize: 16, color: isDark ? const Color(0xFFF5F5F7) : const Color(0xFF1A1A1A)),
@@ -144,6 +147,9 @@ class _StepNameServicesState extends State<StepNameServices> {
           ),
         ),
         const SizedBox(height: 28),
+        // Services label
+        Text('What services do you offer?', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isDark ? const Color(0xFF98989D) : const Color(0xFF6E6E73))),
+        const SizedBox(height: 8),
         if (_selectedSlugs.isNotEmpty) ...[
           Wrap(spacing: 8, runSpacing: 8, children: _selectedSlugs.map((slug) => GestureDetector(
             onTap: () => _toggleService(slug),
@@ -232,7 +238,7 @@ class _StepNameServicesState extends State<StepNameServices> {
 }
 
 // ────────────────────────────────────────
-// STEP 2: Workspace Location (Real Map)
+// STEP 2: Workspace Location (Draggable Map)
 // ────────────────────────────────────────
 class StepLocation extends StatefulWidget {
   final Map<String, dynamic> initialData;
@@ -248,6 +254,7 @@ class StepLocation extends StatefulWidget {
 
 class _StepLocationState extends State<StepLocation> {
   final _addressController = TextEditingController();
+  final MapController _mapController = MapController();
   LatLng? _currentPosition;
   double? _lat, _lng;
   bool _loadingLocation = true;
@@ -292,13 +299,15 @@ class _StepLocationState extends State<StepLocation> {
         desiredAccuracy: LocationAccuracy.high,
       );
       if (!mounted) return;
+      final pos = LatLng(position.latitude, position.longitude);
       setState(() {
-        _currentPosition = LatLng(position.latitude, position.longitude);
+        _currentPosition = pos;
         _lat = position.latitude;
         _lng = position.longitude;
         _loadingLocation = false;
       });
-      _reverseGeocode(LatLng(position.latitude, position.longitude));
+      _mapController.move(pos, 15.0);
+      _reverseGeocode(pos);
     } catch (e) {
       if (mounted) setState(() { _geoError = true; _loadingLocation = false; });
     }
@@ -315,10 +324,20 @@ class _StepLocationState extends State<StepLocation> {
     } catch (_) {}
   }
 
-  void _onMapTapped(TapPosition tapPosition, LatLng point) {
-    HapticFeedback.selectionClick();
-    setState(() { _currentPosition = point; _lat = point.latitude; _lng = point.longitude; });
-    _reverseGeocode(point);
+  void _onMapMoved(MapPosition position, bool hasGesture) {
+    if (!hasGesture) return;
+    final center = _mapController.camera.center;
+    setState(() {
+      _currentPosition = center;
+      _lat = center.latitude;
+      _lng = center.longitude;
+    });
+  }
+
+  void _onMapDragEnd() {
+    if (_currentPosition != null) {
+      _reverseGeocode(_currentPosition!);
+    }
   }
 
   void _handleContinue() {
@@ -345,7 +364,7 @@ class _StepLocationState extends State<StepLocation> {
         const SizedBox(height: 6),
         Text('Set your workspace location so clients can find you.', style: TextStyle(fontSize: 15, color: isDark ? const Color(0xFF98989D) : const Color(0xFF6E6E73))),
         const SizedBox(height: 24),
-        // Real map
+        // Draggable map with fixed center pin
         Container(
           height: 280,
           width: double.infinity,
@@ -356,26 +375,35 @@ class _StepLocationState extends State<StepLocation> {
                   ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.location_off, size: 36, color: Color(0xFFFF3B30)), const SizedBox(height: 8), const Text('Location unavailable', style: TextStyle(color: Color(0xFFFF3B30), fontSize: 13)), const SizedBox(height: 12), ElevatedButton(onPressed: _getCurrentLocation, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3B5FE3), foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))), child: const Text('Try Again'))]))
                   : ClipRRect(
                       borderRadius: BorderRadius.circular(20),
-                      child: FlutterMap(
-                        options: MapOptions(
-                          initialCenter: _currentPosition ?? const LatLng(9.0765, 7.3986),
-                          initialZoom: 15.0,
-                          onTap: _onMapTapped,
-                        ),
+                      child: Stack(
+                        alignment: Alignment.center,
                         children: [
-                          TileLayer(
-                            urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                            subdomains: const ['a', 'b', 'c', 'd'],
-                            userAgentPackageName: 'com.gigscourt.app',
-                          ),
-                          if (_currentPosition != null)
-                            MarkerLayer(markers: [
-                              Marker(
-                                point: _currentPosition!,
-                                width: 50, height: 50,
-                                child: const Icon(Icons.location_pin, color: Color(0xFF3B5FE3), size: 42),
+                          FlutterMap(
+                            mapController: _mapController,
+                            options: MapOptions(
+                              initialCenter: _currentPosition ?? const LatLng(9.0765, 7.3986),
+                              initialZoom: 15.0,
+                              onMapEvent: (event) {
+                                if (event is MapEventMove) {
+                                  _onMapMoved(event.mapPosition, event is MapEventDrag);
+                                }
+                                if (event is MapEventMoveEnd) {
+                                  _onMapDragEnd();
+                                }
+                              },
+                            ),
+                            children: [
+                              TileLayer(
+                                urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                                subdomains: const ['a', 'b', 'c', 'd'],
+                                userAgentPackageName: 'com.gigscourt.app',
                               ),
-                            ]),
+                            ],
+                          ),
+                          // Fixed center pin
+                          IgnorePointer(
+                            child: Icon(Icons.location_pin, color: const Color(0xFF3B5FE3), size: 42),
+                          ),
                         ],
                       ),
                     ),
